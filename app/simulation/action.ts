@@ -155,7 +155,7 @@ export async function generateAnswers(prevState: any, formData: FormData): Promi
   } catch (err: any) {
     console.error('generateAnswers:::ERROR', err);
 
-    if (JSON.parse(err.message || '')?.error?.code === 429) {
+    if (safeJsonParse(err.message || '')?.error?.code === 429) {
       return {
         message: 'Api key invalid / limit quota is 0',
       }
