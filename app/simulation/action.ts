@@ -4,6 +4,8 @@ import { GoogleGenAI } from "@google/genai";
 import z from "zod";
 import { AiResult } from "./components/AiResultItem";
 import zodToJsonSchema from "zod-to-json-schema";
+import { cleanAIResponse } from "../helpers/cleanAIResponse";
+import { safeJsonParse } from "../helpers/safeJsonParse";
 
 export type RequestState = {
   errors?: {
@@ -121,20 +123,30 @@ export async function generateAnswers(prevState: any, formData: FormData): Promi
     });
 
     if (aiRes.text) {
-      console.log('text', aiRes.text);
+      const raw = aiRes.text || '';
 
-      const parsed = JSON.parse(aiRes.text);
+      const cleaned = cleanAIResponse(raw);
 
-      const data = {
-        best: JSON.parse(parsed.best),
-        realistic: JSON.parse(parsed.realistic),
-        worst: JSON.parse(parsed.worst),
-      };
+      let parsed = safeJsonParse(cleaned);
+
+      if (parsed && typeof parsed.best === 'string') {
+        parsed = {
+          best: JSON.parse(parsed.best),
+          realistic: JSON.parse(parsed.realistic),
+          worst: JSON.parse(parsed.worst),
+        };
+      }
+
+      const validated = resultSchema.safeParse(parsed);
+
+      if (!validated.success) {
+        throw new Error('Invalid AI structure');
+      }
 
       return {
-        data,
+        data: validated.data,
         success: true,
-      }
+      };
     }
 
     return {
