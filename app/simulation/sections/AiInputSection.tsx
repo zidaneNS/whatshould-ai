@@ -106,6 +106,7 @@ export default function AiInputSection() {
                   setSituation('');
                   setAikoAs('');
                 }}
+                type="button"
               ><FaRepeat /></Button>
             </div>
           )}
