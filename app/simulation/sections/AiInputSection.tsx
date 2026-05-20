@@ -8,6 +8,7 @@ import { generateAnswers } from "../action";
 import { Spinner } from "@/components/ui/spinner";
 import ErrorInput from "@/components/ErrorInput";
 import AiResultItem, { AiResult } from "../components/AiResultItem";
+import { FaRepeat } from "react-icons/fa6";
 
 const aiResult = {
   outcome: 'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eius consequatur a molestiae magnam maxime eligendi illum, velit ipsum quis saepe repellendus possimus quibusdam corporis explicabo, commodi sunt quam veritatis quidem, perferendis sint eaque. Blanditiis cupiditate architecto dolores! Consectetur molestiae excepturi fugiat, illum doloribus ad laborum delectus voluptates earum ratione quas rerum modi voluptas vero veritatis non officia aliquam? Culpa architecto doloribus aliquid. Non sunt odit praesentium, omnis adipisci porro esse ex quibusdam sed veritatis beatae eum nobis, perspiciatis ipsam minima totam dicta id tenetur corrupti consequuntur ratione, cupiditate numquam enim error! Odio, ut vitae quaerat veniam ipsa fugit ipsum natus!',
@@ -21,6 +22,8 @@ export default function AiInputSection() {
   const [bestResult, setBestResult] = useState<AiResult | null>(null);
   const [realisticResult, setRealisticResult] = useState<AiResult | null>(null);
   const [worstResult, setWorstResult] = useState<AiResult | null>(null);
+  const [situation, setSituation] = useState<string>('');
+  const [aikoAs, setAikoAs] = useState<string>('');
 
   const resultRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,16 +49,18 @@ export default function AiInputSection() {
       setBestResult(state.data.best || null);
       setRealisticResult(state.data.realistic || null);
       setWorstResult(state.data.worst || null);
-
-      if (!resultRef.current) return;
-      resultRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
     }
 
     setErrMessage('');
   }, [state]);
+
+  useEffect(() => {
+    if (!resultRef.current) return;
+    resultRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }, [resultRef, bestResult, realisticResult, worstResult]);
 
   return (
     <div className="flex flex-col gap-y-6 w-full">
@@ -72,6 +77,8 @@ export default function AiInputSection() {
               rows={6}
               placeholder="I have a pretty busy routine, internships, thesis, etc. However, I want to learn new skills and I want to find additional income, would it be a solution if I sacrifice my rest time for this?"
               className="outline-none"
+              value={situation}
+              onChange={(e) => setSituation(e.target.value)}
             />
             {state?.errors?.prompt && <ErrorInput errorMessage={state.errors.prompt} />}
           </div>
@@ -82,13 +89,25 @@ export default function AiInputSection() {
               <Spinner />
             </div>
           ) : (
-            <Button
-              className="py-6 px-12 mx-auto"
-              type="submit"
+            <div
+              className="flex items-center w-fit mx-auto gap-x-3"
             >
-              <IoSparkles />
-              Generate
-            </Button>
+              <Button
+                className="py-6 px-12 mx-auto"
+                type="submit"
+              >
+                <IoSparkles />
+                Generate
+              </Button>
+              <Button
+                variant="outline"
+                className="flex justify-center items-center p-2 rounded-full"
+                onClick={() => {
+                  setSituation('');
+                  setAikoAs('');
+                }}
+              ><FaRepeat /></Button>
+            </div>
           )}
           {state?.message && <ErrorInput errorMessage={state.message} />}
           {errMessage && <ErrorInput errorMessage={errMessage} />}
@@ -113,6 +132,8 @@ export default function AiInputSection() {
               id="aikoAs"
               placeholder="e.g. psychologist and expert in IT"
               className="outline-none"
+              value={aikoAs}
+              onChange={(e) => setAikoAs(e.target.value)}
             />
           </div>
           {state?.errors?.aikoAs && <ErrorInput errorMessage={state.errors.aikoAs} />}

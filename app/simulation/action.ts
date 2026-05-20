@@ -1,11 +1,16 @@
 'use server';
 
-import { GoogleGenAI } from "@google/genai";
 import z from "zod";
 import { AiResult } from "./components/AiResultItem";
-import zodToJsonSchema from "zod-to-json-schema";
-import { cleanAIResponse } from "../helpers/cleanAIResponse";
 import { safeJsonParse } from "../helpers/safeJsonParse";
+import OpenAI from "openai";
+import { zodTextFormat } from "openai/helpers/zod.mjs";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPEN_ROUTER_API,
+  baseURL: "https://openrouter.ai/api/v1",
+  timeout: 30000,
+})
 
 export type RequestState = {
   errors?: {
@@ -42,10 +47,6 @@ const resultSchema = z.object({
     reason: z.string().describe('The reason of why the outcome happen'),
     advice: z.string().describe('Simple advice to respond the outcome'),
   }).describe('Worst outcome from the decision'),
-});
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
 });
 
 export async function generateAnswers(prevState: any, formData: FormData): Promise<RequestState> {
@@ -110,43 +111,65 @@ export async function generateAnswers(prevState: any, formData: FormData): Promi
 
     Do NOT return strings. Do NOT flatten fields.
 
-    User decision: ${prompt}
+    User (me) decision: ${prompt}
     `;
 
-    const aiRes = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: aiPrompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseJsonSchema: zodToJsonSchema(resultSchema as any),
+    // const aiRes = await ai.models.generateContent({
+    //   model: 'gemini-3-flash-preview',
+    //   contents: aiPrompt,
+    //   config: {
+    //     responseMimeType: 'application/json',
+    //     responseJsonSchema: zodToJsonSchema(resultSchema as any),
+    //   }
+    // });
+
+    const openaiRes = await openai.responses.parse({
+      model: process.env.OPEN_ROUTER_MODEL || "",
+      input: [
+        {
+          role: 'system',
+          content: 'Extract the result-schema information'
+        },
+        {
+          role: 'user',
+          content: aiPrompt,
+        }
+      ],
+      text: {
+        format: zodTextFormat(resultSchema, 'result-schema'),
       }
-    });
+    })
 
-    if (aiRes.text) {
-      const raw = aiRes.text || '';
+    // if (aiRes.text) {
+    //   const raw = aiRes.text || '';
 
-      const cleaned = cleanAIResponse(raw);
+    //   const cleaned = cleanAIResponse(raw);
 
-      let parsed = safeJsonParse(cleaned);
+    //   let parsed = safeJsonParse(cleaned);
 
-      if (parsed && typeof parsed.best === 'string') {
-        parsed = {
-          best: JSON.parse(parsed.best),
-          realistic: JSON.parse(parsed.realistic),
-          worst: JSON.parse(parsed.worst),
-        };
-      }
+    //   if (parsed && typeof parsed.best === 'string') {
+    //     parsed = {
+    //       best: JSON.parse(parsed.best),
+    //       realistic: JSON.parse(parsed.realistic),
+    //       worst: JSON.parse(parsed.worst),
+    //     };
+    //   }
 
-      const validated = resultSchema.safeParse(parsed);
+    //   const validated = resultSchema.safeParse(parsed);
 
-      if (!validated.success) {
-        throw new Error('Invalid AI structure');
-      }
+    //   if (!validated.success) {
+    //     throw new Error('Invalid AI structure');
+    //   }
 
-      return {
-        data: validated.data,
-        success: true,
-      };
+    //   return {
+    //     data: validated.data,
+    //     success: true,
+    //   };
+    // }
+
+    if (openaiRes.output_parsed) {
+      console.log('parsed', openaiRes.output_parsed);
+      return { success: true, data: openaiRes.output_parsed }
     }
 
     return {

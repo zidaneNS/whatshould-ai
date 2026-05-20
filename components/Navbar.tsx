@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { IoSparkles } from "react-icons/io5";
 import { usePathname, useRouter } from "next/navigation";
+import { motion } from "motion/react";
 
 interface Navlink {
   label: string;
@@ -35,7 +36,18 @@ export default function Navbar() {
 
 
   return (
-    <nav className="sticky top-0 bg-background z-20 py-4 px-12 border-b border-foreground flex justify-between items-center">
+    <motion.nav
+      className="sticky top-0 bg-background z-20 py-4 px-12 border-b border-foreground flex justify-between items-center"
+      initial={{
+        translateY: -100,
+      }}
+      animate={{
+        translateY: 0,
+        transition: {
+          duration: 0.3,
+        },
+      }}
+    >
       <div className="flex items-center gap-x-2">
         <p className="text-xl font-semibold">WhatShould AI</p>
         <IoSparkles />
@@ -55,6 +67,6 @@ export default function Navbar() {
         size="lg"
         onClick={() => router.push('/simulation')}
       >Get Started</Button>
-    </nav>
+    </motion.nav>
   )
 }
